@@ -63,21 +63,6 @@ public class ImgflipApi {
         int boxCount;
     }
 
-    /*
-    public static void main(String[] arg) {
-        String joke1 = "To prove he was right, the flat-earther walked to the end of the Earth";
-        String joke2 = "He eventually came around";
-        String template_id = "222403160";
-
-        System.out.println(createImg(joke1, joke2, template_id));
-
-        ArrayList<Template> templates = getTemplates();
-        for (Template template: templates) {
-            System.out.println(GSON.toJson(template));
-        }
-
-    }
-    */
     /**
      * Calls the ImgflipApi to get the list of top 100 meme templates.
      *
@@ -88,7 +73,7 @@ public class ImgflipApi {
         ArrayList<Template> templates = new ArrayList<Template>(10);
         try {
             String url = String.format("%s/get_memes", ENDPOINT);
-            System.out.println(url);
+            //System.out.println(url);
             String json = fetchString(url);
 
             ImgflipResult result = GSON.fromJson(json, ImgflipResult.class);
@@ -123,11 +108,11 @@ public class ImgflipApi {
             String url = String.format("%s/caption_image?template_id=%s&username=%s&password=%s" +
                 "&text0=%s&text1=%s", ENDPOINT, template_id, USER, PASSWORD, joke1, joke2
             );
-            System.out.println(url);
+            //System.out.println(url);
             String json = fetchString(url);
 
             ImgflipResult result = GSON.fromJson(json, ImgflipResult.class);
-            System.out.println(GSON.toJson(result));
+            //System.out.println(GSON.toJson(result));
 
             return result.data.url;
         } catch (IllegalArgumentException | IOException | InterruptedException e) {

@@ -15,12 +15,13 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.TilePane;
 import javafx.geometry.Pos;
+import javafx.scene.text.TextAlignment;
+
 import java.util.Random;
 
 import javafx.scene.control.TextArea;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -46,11 +47,14 @@ public class ApiApp extends Application {
     private Label language;
     private Label search;
     private ComboBox<String> languageSelect;
+    private ComboBox<Integer> jokeSelect;
     private TextField searchField;
+    private TextField memeField;
     private Label memeLabel;
     private Button jokeFind;
     private Label loadTemplate;
     private Button loadTemplateButton;
+    private TextArea jokeMessageBar;
     private Label messageBar;
     private TilePane memeTemplates;
     private Button createMeme;
@@ -81,7 +85,6 @@ public class ApiApp extends Application {
      * constructor is executed in Step 2 of the JavaFX Application Life-Cycle.
      */
     public ApiApp() {
-        System.out.println("ApiApp() called");
         root = new VBox();
         selectBarCategory = new HBox();
         selectBarSearch = new HBox();
@@ -108,12 +111,15 @@ public class ApiApp extends Application {
         categoriesCheck = new CheckBox[]{anyCheck, programmingCheck, miscCheck, darkCheck,
                                          punCheck, spookyCheck, christmasCheck};
         languageSelect = new ComboBox<String>();
+        jokeSelect = new ComboBox<Integer>();
         loadTemplate = new Label("Meme Templates:");
         loadTemplateButton = new Button("Load");
-        messageBar = new Label("Use the selection features to search for jokes and choose a meme " +
-        "template by selecting an option below");
+        messageBar = new Label("Use the selection features to search for jokes and choose a " +
+        "meme template.");
+        jokeMessageBar = new TextArea();
         memeLabel = new Label("Create meme:");
         createMeme = new Button("Create");
+        memeField = new TextField("Meme Link:");
 
         loadTemplateSection = new HBox();
         createMemeSection = new HBox();
@@ -131,7 +137,6 @@ public class ApiApp extends Application {
     /** {@inheritDoc} */
     @Override
     public void start(Stage stage) {
-        System.out.println("start called");
         this.stage = stage;
 
         sceneSetup();
@@ -140,18 +145,20 @@ public class ApiApp extends Application {
         jokeFind.setOnAction(e -> findJoke());
         loadTemplateButton.setOnAction(e -> loadTemplate());
         createMeme.setOnAction(e -> createMeme());
+        jokeSelect.setOnAction(e -> changeJoke());
+        jokeSelect.setDisable(true);
 
         languageBar.setAlignment(Pos.CENTER_LEFT);
         selectBar.setAlignment(Pos.CENTER_LEFT);
         loadTemplateSection.setAlignment(Pos.CENTER_LEFT);
         createMemeSection.setAlignment(Pos.CENTER_LEFT);
         memeBarMiddle.setAlignment(Pos.CENTER);
+        messageBar.setTextAlignment(TextAlignment.CENTER);
+        root.setAlignment(Pos.TOP_CENTER);
 
         languageSelect.getItems().addAll("English", "Spanish", "French", "German", "Portuguese",
             "Czech");
         languageSelect.getSelectionModel().selectFirst();
-
-        //selectBarSearch.setHgrow(searchField, Priority.ALWAYS);
 
         memeTemplates.setPrefRows(3);
         memeTemplates.setPrefColumns(3);
@@ -162,7 +169,6 @@ public class ApiApp extends Application {
             templateListPanel.add(imgView);
             memeTemplates.getChildren().add(imgView);
             imgView.setPreserveRatio(true);
-            //imgView.setFitWidth(100);
             final ImageView imgView1 = imgView;
             final int index = i;
             imgView.setOnMouseClicked(e -> templateChosen(imgView1, index));
@@ -174,11 +180,16 @@ public class ApiApp extends Application {
         memeGrid.add(meme,2,0);
         meme.setFitWidth(300);
         memeGrid.setHgap(30);
+        memeField.setEditable(false);
+        memeField.setPrefWidth(220);
+        jokeMessageBar.setEditable(false);
+        jokeMessageBar.setWrapText(true);
+        jokeMessageBar.setPrefRowCount(2);
 
-        scene = new Scene(root,690,460);
+        scene = new Scene(root,690,600);
 
         // setup stage
-        stage.setTitle("ApiApp!");
+        stage.setTitle("MemeBuidlerApiApp");
         stage.setScene(scene);
         stage.setOnCloseRequest(event -> Platform.exit());
         stage.sizeToScene();
@@ -191,7 +202,7 @@ public class ApiApp extends Application {
      */
     public void sceneSetup() {
         root.getChildren().addAll(jokeCreate, selectBarCategory, selectBarSearch,
-            messageBar, memeBarMiddle, memeGrid);
+            messageBar, jokeMessageBar, memeBarMiddle, memeGrid);
         root.setSpacing(5);
 
         categoriesHorizontal.getChildren().addAll(categoriesCheck);
@@ -205,16 +216,16 @@ public class ApiApp extends Application {
         selectBar.getChildren().addAll(search, searchField, jokeFind);
         selectBar.setSpacing(10);
 
-        selectBarSearch.getChildren().addAll(languageBar,selectBar);
+        selectBarSearch.getChildren().addAll(languageBar,selectBar, jokeSelect);
         selectBarSearch.setSpacing(10);
 
         loadTemplateSection.getChildren().addAll(loadTemplate, loadTemplateButton);
         loadTemplateSection.setSpacing(10);
-        createMemeSection.getChildren().addAll(memeLabel, createMeme);
+        createMemeSection.getChildren().addAll(createMeme, memeField);
         createMemeSection.setSpacing(10);
 
         memeBarMiddle.getChildren().addAll(loadTemplateSection, createMemeSection);
-        memeBarMiddle.setSpacing(270);
+        memeBarMiddle.setSpacing(140);
 
     }
 
@@ -262,43 +273,78 @@ public class ApiApp extends Application {
         }
 
         String search = searchField.getText();
-        System.out.println(search);
         searchField.clear();
 
         String lang = languageSelect.getValue();
 
-        jokeApiResult = JokeApi.getJoke(categories, lang, search);
-        if (jokeApiResult == null) {
+        JokeApi.JokeApiResult jokeApiResultTemp = JokeApi.getJoke(categories, lang, search);
+        if (jokeApiResultTemp == null) {
             messageBar.setText("Error was unable to find any jokes. Please try different search.");
             return;
         } else {
-            messageBar.setText(String.format("%d jokes found", jokeApiResult.amount));
+            jokeSelect.setDisable(false);
+            jokeApiResult = jokeApiResultTemp;
+
+            selectBarSearch.getChildren().remove(jokeSelect);
+            ComboBox<Integer> jokeSelectTemp = new ComboBox<Integer>();
+
+            for (int j = 0; j < jokeApiResult.amount; j++) {
+                jokeSelectTemp.getItems().add(j + 1);
+            }
+            jokeSelect = jokeSelectTemp;
+            jokeSelect.setOnAction(e -> changeJoke());
+            selectBarSearch.getChildren().add(jokeSelect);
+            jokeSelect.getSelectionModel().selectFirst();
+
+            jokeMessageBar.setPrefRowCount(3);
+            changeJoke();
+            messageBar.setText(jokeApiResult.amount + " jokes loaded. Select different jokes " +
+                "using the numbered box.");
             return;
         }
+    }
+
+    /**
+     * Uses jokeSelectionBox to choose a joke in the range selected and be printed out for the user.
+     */
+    public void changeJoke() {
+        int index = jokeSelect.getValue() - 1;
+        String setup = jokeApiResult.jokes[index].setup;
+        String punchline = jokeApiResult.jokes[index].delivery;
+        jokeMessageBar.setText(String.format("Joke %d:\nSetup: %s\nPunchline: %s",
+            index + 1, setup, punchline));
+
     }
 
     /**
      * Pressing load template uses {@link ImgflipApi#getTemplates} to get arraylist of templates.
      */
     public void loadTemplate() {
-        System.out.println("loading");
-        templatesAll = ImgflipApi.getTemplates();
-        System.out.println("finished api bit");
-        if (templatesAll.size() == 0) {
-            messageBar.setText("Error. No templates were found.");
-            return;
+        if (templatesAll == null) {
+            templatesAll = ImgflipApi.getTemplates();
+            if (templatesAll.size() == 0) {
+                messageBar.setText("Error. No templates were found.");
+                return;
+            }
         }
-        System.out.println("randoming");
         Random random = new Random();
+
+        templateList.clear();
+
+        HashSet<Integer> distinctIndexes = new HashSet<Integer>();
 
         for (int i = 0; i < 9; i++) {
             int rand_index = random.nextInt(templatesAll.size());
-            System.out.println(rand_index);
+
+            while (distinctIndexes.contains(rand_index)) {
+                rand_index = random.nextInt(templatesAll.size());
+            }
+            distinctIndexes.add(rand_index);
+
             templateListPanel.get(i).setImage(new Image(templatesAll.get(rand_index).url,100,100,
-                false,true));
+                false, true));
             templateList.add(templatesAll.get(rand_index));
         }
-        System.out.println("finished sending images");
         messageBar.setText("Loaded Templates. Please select a template to create a meme.");
     }
 
@@ -310,11 +356,9 @@ public class ApiApp extends Application {
      * @param index the index of the imgView in templateList.
      */
     public void templateChosen(ImageView imgView, int index) {
-        System.out.println("template chosen!");
-        System.out.println(index);
-        meme.setImage(imgView.getImage());
+        meme.setImage(new Image(templateList.get(index).url));
         templateIndex = index;
-        messageBar.setText("Template selected.");
+        messageBar.setText("Template selected. Press 'Create' to make the meme.");
     }
 
     /**
@@ -323,25 +367,25 @@ public class ApiApp extends Application {
      */
     public void createMeme() {
         if (templateIndex == -1) {
-            messageBar.setText("Select a template first.");
+            messageBar.setText("Select a template.");
             return;
-        }
-        if (templateList.size() == 0 ) {
+        } else if (templateList.size() == 0 ) {
             messageBar.setText("Load templates before generating a meme.");
             return;
+        } else if (jokeApiResult == null) {
+            messageBar.setText("Find jokes before creating a meme!");
+            return;
         }
 
-        Random random = new Random();
-        int random_index = random.nextInt(jokeApiResult.amount);
 
-        String setup = jokeApiResult.jokes[random_index].setup;
-        String delivery = jokeApiResult.jokes[random_index].delivery;
+        int jokeIndex = jokeSelect.getValue() - 1;
+        String setup = jokeApiResult.jokes[jokeIndex].setup;
+        String punchline = jokeApiResult.jokes[jokeIndex].delivery;
         String templateID = templateList.get(templateIndex).id;
 
-        System.out.println("creating image");
-        String memeLink = ImgflipApi.createImg(setup, delivery, templateID);
-        System.out.println("found image!");
-        messageBar.setText("Link to meme: " + memeLink);
+        String memeLink = ImgflipApi.createImg(setup, punchline, templateID);
+        messageBar.setText("Created Meme! Link to meme below.");
+        memeField.setText(memeLink);
         meme.setImage(new Image(memeLink));
     }
 } // ApiApp

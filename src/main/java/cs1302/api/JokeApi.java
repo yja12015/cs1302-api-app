@@ -103,7 +103,7 @@ public class JokeApi {
             String url = String.format("%s/joke/%s?%s%s&type=twopart%s&amount=10", ENDPOINT,
                 Category, Language, blacklistFlags, Search);
 
-            System.out.println(url);
+            //System.out.println(url);
             String json = fetchString(url);
 
             JokeApiResult result = GSON.fromJson(json, JokeApiResult.class);
