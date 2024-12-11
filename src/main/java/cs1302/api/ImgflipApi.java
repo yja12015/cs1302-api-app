@@ -55,9 +55,10 @@ public class ImgflipApi {
     /**
      * Represnts the templates inside of the memes array.
      */
-    private static class Template {
+    static class Template {
         String id;
         String name;
+        String url;
         @SerializedName("box_count")
         int boxCount;
     }
@@ -87,6 +88,7 @@ public class ImgflipApi {
         ArrayList<Template> templates = new ArrayList<Template>(10);
         try {
             String url = String.format("%s/get_memes", ENDPOINT);
+            System.out.println(url);
             String json = fetchString(url);
 
             ImgflipResult result = GSON.fromJson(json, ImgflipResult.class);

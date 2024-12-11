@@ -15,7 +15,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
 import java.util.ArrayList;
-
+import java.util.HashMap;
+import java.util.Map;
 /**
  * JokeApi uses the api to generate jokes to be sent to the {@link ImgflipApi}.
  *
@@ -35,11 +36,19 @@ public class JokeApi {
 
     private static final String ENDPOINT = "https://v2.jokeapi.dev/";
 
+    private static final Map<String, String> DICTIONARY = new HashMap<String, String>() {{
+            put("English", "en");
+            put("Czech", "cs");
+            put("German","de");
+            put("Spanish","es");
+            put("French","fr");
+            put("Portuguese","pt");
+        }};
 
     /**
      * Represents a JokeApi Result.
      */
-    private static class JokeApiResult {
+    static class JokeApiResult {
         int amount;
         Joke[] jokes;
     }
@@ -47,16 +56,17 @@ public class JokeApi {
     /**
      * Represents each joke in the jokes list.
      */
-    private static class Joke {
+    static class Joke {
         String setup;
         String delivery;
     }
 
+    /*
     public static void main(String[] args) {
         String[] category = new String[]{"Any"};
         getJoke(category, "en", "");
     }
-
+    */
 
     /**
      * getJoke uses several optional paramaters to find two halves of a joke to be made into a meme.
@@ -70,6 +80,11 @@ public class JokeApi {
     public static JokeApiResult getJoke(String[] category, String language, String search) {
         String blacklistFlags = "&blacklistFlags=nsfw,religious,political,racist,sexist,explicit";
 
+
+        if (category[0] == "Any") {
+            category = new String[]{"Any"};
+        }
+
         String Category = category[0];
         for (int i = 1;i < category.length;i++) {
             Category += "," + category[i];
@@ -78,21 +93,21 @@ public class JokeApi {
         String Search = search;
 
         if (search != "") {
-            Search = "&" + URLEncoder.encode(search, StandardCharsets.UTF_8);
+            Search = "&contains=" + URLEncoder.encode(search, StandardCharsets.UTF_8);
         }
 
-        String Language = "lang=" + language;
+        String Language = "lang=" + DICTIONARY.get(language);
 
 
         try {
-            String url = String.format("%s/joke/%s?%s%s&type=twopart&amount=10", ENDPOINT, Category,
-                Language, blacklistFlags, Search);
+            String url = String.format("%s/joke/%s?%s%s&type=twopart%s&amount=10", ENDPOINT,
+                Category, Language, blacklistFlags, Search);
 
             System.out.println(url);
             String json = fetchString(url);
 
             JokeApiResult result = GSON.fromJson(json, JokeApiResult.class);
-            System.out.println(GSON.toJson(result));
+            //System.out.println(GSON.toJson(result));
 
             return result;
         } catch (IllegalArgumentException | IOException | InterruptedException e) {
